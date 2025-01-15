@@ -13,3 +13,5 @@ Due to `cameratransform` being stuck on Python 3.11 (due to Pandas 1.x), we need
 ## Input/Output
 - **Input** message must be a `SaeMessage`. The geo-mapping is done on each `Detection` message within. If there are no `Detection` messages, the processing is effectively a no-op.
 - **Output** is the input `SaeMessage` with geo-coordinates added to every `Detection`. All other fields are preserved.
+
+Note for myself: Now you are working on autocamgeomapping branch on the forked repo, and this branch is based on a fetched/merged version of the upstream remote repo. when I finished this branch, i can go to florian's repo to ask for a pull request. 

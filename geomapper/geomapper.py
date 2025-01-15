@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict, List, NamedTuple
-
+from numba import njit
 import cameratransform as ct
 from prometheus_client import Counter, Histogram, Summary
 from shapely import Point as ShapelyPoint
@@ -31,51 +31,14 @@ class GeoMapper:
         logger.setLevel(self._config.log_level.value)
 
         self._cameras: Dict[str, ct.Camera] = dict()
-        self._cam_configs: Dict[str, CameraConfig] = dict()
         self._mapping_areas: Dict[str, Polygon] = dict()
 
         self._setup()
 
     def _setup(self):
         for cam_conf in self._config.cameras:
-            if cam_conf.passthrough:
-                continue
-
-            lens_correction = ct.NoDistortion()
-            if cam_conf.abc_distortion_a is not None:
-                lens_correction = ct.ABCDistortion(
-                    a=cam_conf.abc_distortion_a, 
-                    b=cam_conf.abc_distortion_b, 
-                    c=cam_conf.abc_distortion_c,
-                )
-            if cam_conf.brown_distortion_k1 is not None:
-                lens_correction = ct.BrownLensDistortion(
-                    k1=cam_conf.brown_distortion_k1,
-                    k2=cam_conf.brown_distortion_k2,
-                    k3=cam_conf.brown_distortion_k3,
-                )
-
-            camera = ct.Camera(
-                projection=ct.RectilinearProjection(
-                    focallength_mm=cam_conf.focallength_mm,
-                    sensor_height_mm=cam_conf.sensor_height_mm,
-                    sensor_width_mm=cam_conf.sensor_width_mm,
-                    image_height_px=cam_conf.image_height_px,
-                    image_width_px=cam_conf.image_width_px,
-                    view_x_deg=cam_conf.view_x_deg,
-                    view_y_deg=cam_conf.view_y_deg, 
-                ),
-                orientation=ct.SpatialOrientation(
-                    elevation_m=cam_conf.elevation_m,
-                    tilt_deg=cam_conf.tilt_deg,
-                    heading_deg=cam_conf.heading_deg,
-                    roll_deg=cam_conf.roll_deg,
-                ),
-                lens=lens_correction,
-            )
-            camera.setGPSpos(lat=cam_conf.pos_lat, lon=cam_conf.pos_lon)
-            self._cameras[cam_conf.stream_id] = camera
-            self._cam_configs[cam_conf.stream_id] = cam_conf
+            if cam_conf.cam_config_path:
+                self._cameras[cam_conf.stream_id] = ct.Camera.load(cam_conf.cam_config_path)
 
             if cam_conf.mapping_area is not None:
                 self._mapping_areas[cam_conf.stream_id] = shape(cam_conf.mapping_area)
@@ -89,7 +52,7 @@ class GeoMapper:
         cam_id = sae_msg.frame.source_id
 
         camera = self._cameras.get(cam_id)
-        image_height_px = camera.parameters.parameters['image_height_px'].value
+        image_height_px = camera.parameters.parameters['image_height_px'].value # if this value is not contained, modify the autofitting part in Projectreclinar
         image_width_px = camera.parameters.parameters['image_width_px'].value
 
         if camera is None:
@@ -99,8 +62,8 @@ class GeoMapper:
 
         with TRANSFORM_DURATION.time():
             for detection in sae_msg.detections:
-                center = self._get_center(detection.bounding_box)
-                gps = camera.gpsFromImage([center.x * image_width_px, center.y * image_height_px], Z=self._config.object_center_elevation_m)
+                center = self._get_center(detection.bounding_box,image_height_px,image_width_px)
+                gps = camera.gpsFromImage([center.x, center.y], Z=self._config.object_center_elevation_m)
                 lat, lon = gps[0], gps[1]
                 if self._is_filtered(cam_id, lat, lon):
                     logger.debug(f'SKIPPED: cls {detection.class_id}, oid {detection.object_id.hex()}, lat {lat}, lon {lon}')
@@ -116,10 +79,11 @@ class GeoMapper:
 
         return self._pack_proto(sae_msg)
         
-    def _get_center(self, bbox: BoundingBox) -> Point:
+    @njit
+    def _get_center(self, bbox: BoundingBox,image_width_px,image_height_px) -> Point:
         return Point(
-            x=(bbox.min_x + bbox.max_x) / 2,
-            y=(bbox.min_y + bbox.max_y) / 2
+            x=(bbox.min_x + bbox.max_x) * image_width_px / 2,
+            y=(bbox.min_y + bbox.max_y) * image_height_px/ 2
         )
     
     def _is_filtered(self, cam_id: str, lat: float, lon: float):
