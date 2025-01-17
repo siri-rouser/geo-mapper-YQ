@@ -9,7 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 pydantic = "^2.0.0"
-visionapi = { git = "https://github.com/starwit/vision-api.git", subdirectory = "python/visionapi", tag = "2.0.1" }
+visionapi_yq = {git = "https://github.com/siri-rouser/visionapi_YQ.git", rev= '7ea2ec0240dfb50f597c89d97c8e75872aa9204c', subdirectory="visionapi_YQ", tag = "0.0.1" }
 visionlib = { git = "https://github.com/starwit/vision-lib.git", subdirectory = "python", tag = "0.9.0" }
 redis = "^5.0.0"
 pydantic-settings = "^2.0.3"
@@ -17,6 +17,7 @@ prometheus-client = "^0.17.1"
 cameratransform = { git = "https://github.com/rgerum/cameratransform", rev = "ed36491" }
 geojson-pydantic = "^1.1.2"
 shapely = "^2.0.6"
+numba = "^0.57.0"
 
 [build-system]
 requires = ["poetry-core"]

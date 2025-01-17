@@ -6,7 +6,7 @@ from prometheus_client import Counter, Histogram, Summary
 from shapely import Point as ShapelyPoint
 from shapely import Polygon
 from shapely.geometry import shape
-from visionapi.messages_pb2 import BoundingBox, Detection, SaeMessage
+from visionapi_yq.messages_pb2 import BoundingBox, Detection, SaeMessage, Tracklet, TrackletsByCamera, Trajectory
 
 from .config import CameraConfig, GeoMapperConfig
 
@@ -49,7 +49,7 @@ class GeoMapper:
     @GET_DURATION.time()
     def get(self, input_proto):
         sae_msg = self._unpack_proto(input_proto)
-        cam_id = sae_msg.frame.source_id
+        cam_id = sae_msg.frame.source_id # NOTE: check if cam_id is stream1/starem2, should be right
 
         camera = self._cameras.get(cam_id)
         image_height_px = camera.parameters.parameters['image_height_px'].value # if this value is not contained, modify the autofitting part in Projectreclinar
@@ -58,10 +58,12 @@ class GeoMapper:
         if camera is None:
             return input_proto
 
-        retained_detections: List[Detection] = []
+        # retained_detections: List[Detection] = []
 
         with TRANSFORM_DURATION.time():
-            for detection in sae_msg.detections:
+            for idx, track_id in enumerate(sae_msg.trajectory.cameras[cam_id].tracklets):
+                detection = sae_msg.trajectory.cameras[cam_id].tracklets[track_id].detections_info[-1] # NOTE: Check if the detection is scaled format or normal format
+
                 center = self._get_center(detection.bounding_box,image_height_px,image_width_px)
                 gps = camera.gpsFromImage([center.x, center.y], Z=self._config.object_center_elevation_m)
                 lat, lon = gps[0], gps[1]
@@ -70,12 +72,13 @@ class GeoMapper:
                     continue
                 detection.geo_coordinate.latitude = lat
                 detection.geo_coordinate.longitude = lon
-                retained_detections.append(detection)
-                logger.debug(f'cls {detection.class_id}, oid {detection.object_id.hex()}, lat {lat}, lon {lon}')
+
+                # retained_detections.append(detection)
+                # logger.debug(f'cls {detection.class_id}, oid {detection.object_id.hex()}, lat {lat}, lon {lon}')
         
-        if self._cam_configs[cam_id].remove_unmapped_detections:
-            sae_msg.ClearField('detections')
-            sae_msg.detections.extend(retained_detections)
+                # if self._cam_configs[cam_id].remove_unmapped_detections:
+                #     sae_msg.ClearField('detections')
+                #     sae_msg.detections.extend(retained_detections)
 
         return self._pack_proto(sae_msg)
         
@@ -101,3 +104,4 @@ class GeoMapper:
     @PROTO_SERIALIZATION_DURATION.time()
     def _pack_proto(self, sae_msg: SaeMessage):
         return sae_msg.SerializeToString()
+    
