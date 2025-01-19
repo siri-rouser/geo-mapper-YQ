@@ -15,7 +15,10 @@ class RedisConfig(BaseModel):
 
 class CameraConfig(BaseModel):
     stream_id: str
+    passthrough: bool
     cam_config_path: str
+    mapping_area: Optional[Polygon] = None
+    remove_unmapped_detections: bool = False
 
 class GeoMapperConfig(BaseSettings):
     log_level: LogLevel = LogLevel.WARNING

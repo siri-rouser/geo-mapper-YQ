@@ -1,6 +1,5 @@
 import logging
 from typing import Any, Dict, List, NamedTuple
-from numba import njit
 import cameratransform as ct
 from prometheus_client import Counter, Histogram, Summary
 from shapely import Point as ShapelyPoint
@@ -38,7 +37,8 @@ class GeoMapper:
     def _setup(self):
         for cam_conf in self._config.cameras:
             if cam_conf.cam_config_path:
-                self._cameras[cam_conf.stream_id] = ct.Camera.load(cam_conf.cam_config_path)
+
+                self._cameras[cam_conf.stream_id] = ct.load_camera(cam_conf.cam_config_path)
 
             if cam_conf.mapping_area is not None:
                 self._mapping_areas[cam_conf.stream_id] = shape(cam_conf.mapping_area)
@@ -82,7 +82,6 @@ class GeoMapper:
 
         return self._pack_proto(sae_msg)
         
-    @njit
     def _get_center(self, bbox: BoundingBox,image_width_px,image_height_px) -> Point:
         return Point(
             x=(bbox.min_x + bbox.max_x) * image_width_px / 2,

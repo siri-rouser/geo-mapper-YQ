@@ -4,7 +4,7 @@ version = "0.6.0"
 description = ""
 authors = ["flonix8 <flstanek@googlemail.com>"]
 license = "AGPLv3"
-readme = "README.md"
+
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
@@ -17,7 +17,6 @@ prometheus-client = "^0.17.1"
 cameratransform = { git = "https://github.com/rgerum/cameratransform", rev = "ed36491" }
 geojson-pydantic = "^1.1.2"
 shapely = "^2.0.6"
-numba = "^0.57.0"
 
 [build-system]
 requires = ["poetry-core"]
