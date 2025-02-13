@@ -5,7 +5,7 @@ from prometheus_client import Counter, Histogram, Summary
 from shapely import Point as ShapelyPoint
 from shapely import Polygon
 from shapely.geometry import shape
-from visionapi_yq.messages_pb2 import BoundingBox, Detection, SaeMessage, Tracklet, TrackletsByCamera, Trajectory
+from visionapi_yq.messages_pb2 import BoundingBox, Detection, SaeMessage
 
 from .config import CameraConfig, GeoMapperConfig
 
@@ -58,39 +58,18 @@ class GeoMapper:
         if camera is None:
             return input_proto
 
-        # retained_detections: List[Detection] = []
-
         with TRANSFORM_DURATION.time():
-            for idx, track_id in enumerate(sae_msg.trajectory.cameras[cam_id].tracklets):
-                traj_detection = sae_msg.trajectory.cameras[cam_id].tracklets[track_id].detections_info[-1] # NOTE: Check if the detection is scaled format or normal format
-
-                center = self._get_center(traj_detection.bounding_box,image_width_px,image_height_px)
-                gps = camera.gpsFromImage([center.x, center.y], Z=self._config.object_center_elevation_m)
-                lat, lon = gps[0], gps[1]
-                if self._is_filtered(cam_id, lat, lon):
-                    logger.debug(f'SKIPPED: cls {traj_detection.class_id}, oid {traj_detection.object_id.hex()}, lat {lat}, lon {lon}')
-                    continue
-                traj_detection.geo_coordinate.latitude = lat
-                traj_detection.geo_coordinate.longitude = lon
 
             for detection in sae_msg.detections:
                 center = self._get_center(detection.bounding_box,image_width_px,image_height_px)
                 gps = camera.gpsFromImage([center.x, center.y], Z=self._config.object_center_elevation_m)
                 lat, lon = gps[0], gps[1]
                 if self._is_filtered(cam_id, lat, lon):
-                    logger.debug(f'SKIPPED: cls {traj_detection.class_id}, oid {traj_detection.object_id.hex()}, lat {lat}, lon {lon}')
+                    logger.debug(f'SKIPPED: cls {detection.class_id}, oid {detection.object_id.hex()}, lat {lat}, lon {lon}')
                     continue
                 detection.geo_coordinate.latitude = lat
                 detection.geo_coordinate.longitude = lon
-
-                # retained_detections.append(detection)
-                # logger.debug(f'cls {detection.class_id}, oid {detection.object_id.hex()}, lat {lat}, lon {lon}')
-        
-                # if self._cam_configs[cam_id].remove_unmapped_detections:
-                #     sae_msg.ClearField('detections')
-                #     sae_msg.detections.extend(retained_detections)
-
-
+                
         return self._pack_proto(sae_msg)
         
     def _get_center(self, bbox: BoundingBox,image_width_px,image_height_px) -> Point:

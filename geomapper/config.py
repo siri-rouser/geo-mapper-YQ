@@ -10,7 +10,7 @@ from visionlib.pipeline.settings import LogLevel, YamlConfigSettingsSource
 class RedisConfig(BaseModel):
     host: str = 'localhost'
     port: Annotated[int, Field(ge=1, le=65536)] = 6379
-    input_stream_prefix: str = 'objecttracker'
+    input_stream_prefix: str = 'objectdetector'
     output_stream_prefix: str = 'geomapper'
 
 class CameraConfig(BaseModel):
