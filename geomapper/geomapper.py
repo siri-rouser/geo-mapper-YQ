@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any, Dict, List, NamedTuple
 import cameratransform as ct
 from prometheus_client import Counter, Histogram, Summary
@@ -22,7 +23,6 @@ PROTO_DESERIALIZATION_DURATION = Summary('geo_mapper_proto_deserialization_durat
 class Point(NamedTuple):
     x: float
     y: float
-
 
 class GeoMapper:
     def __init__(self, config: GeoMapperConfig) -> None:
@@ -48,6 +48,7 @@ class GeoMapper:
     
     @GET_DURATION.time()
     def get(self, input_proto):
+        time_start = time.time()
         sae_msg = self._unpack_proto(input_proto)
         cam_id = sae_msg.frame.source_id # NOTE: check if cam_id is stream1/starem2, should be right
 
@@ -59,7 +60,6 @@ class GeoMapper:
             return input_proto
 
         with TRANSFORM_DURATION.time():
-
             for detection in sae_msg.detections:
                 center = self._get_center(detection.bounding_box,image_width_px,image_height_px)
                 gps = camera.gpsFromImage([center.x, center.y], Z=self._config.object_center_elevation_m)
@@ -69,7 +69,7 @@ class GeoMapper:
                     continue
                 detection.geo_coordinate.latitude = lat
                 detection.geo_coordinate.longitude = lon
-                
+        
         return self._pack_proto(sae_msg)
         
     def _get_center(self, bbox: BoundingBox,image_width_px,image_height_px) -> Point:

@@ -47,7 +47,7 @@ def run_stage():
                             stream_keys=[f'{CONFIG.redis.input_stream_prefix}:{cam.stream_id}' for cam in CONFIG.cameras])
     publish = RedisPublisher(CONFIG.redis.host, CONFIG.redis.port)
 
-    PASSTHROUGH_IDS = [ cam.stream_id for cam in CONFIG.cameras if cam.passthrough == True ]
+    PASSTHROUGH_IDS = [cam.stream_id for cam in CONFIG.cameras if cam.passthrough == True ]
     
     with consume, publish:
         for stream_key, proto_data in consume():
