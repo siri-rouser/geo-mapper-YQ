@@ -9,7 +9,7 @@ license = "AGPLv3"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 pydantic = "^2.0.0"
-visionapi_yq = {git = "https://github.com/siri-rouser/visionapi_YQ.git", rev= '7ea2ec0240dfb50f597c89d97c8e75872aa9204c', subdirectory="visionapi_YQ", tag = "0.0.1" }
+visionapi_yq = {git = "https://github.com/siri-rouser/visionapi_YQ.git", rev= 'fcd1c7c47457ba71ccbb637c2dd8ae7cf6f43025', subdirectory="visionapi_YQ", tag = "0.0.1" }
 visionlib = { git = "https://github.com/starwit/vision-lib.git", subdirectory = "python", tag = "0.9.0" }
 redis = "^5.0.0"
 pydantic-settings = "^2.0.3"
